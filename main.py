@@ -131,10 +131,10 @@ if __name__ == '__main__':
     try:
         info = setup()
         print('树莓派小车启动')
-        #play_music(Windows, 0.17)
+        play_music(Windows, 0.17)
         print('按下 ctrl+c 紧急退出')
         print('按键以继续')
-        #ScanKey()
+        ScanKey()
 
         confidence = None
         while_count = 0
