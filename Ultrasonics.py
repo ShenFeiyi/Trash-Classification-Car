@@ -34,6 +34,10 @@ def biu():
         pass
     finish = time.time()
 
+    GPIO.setup(ECHO, GPIO.OUT)
+    GPIO.output(ECHO, GPIO.LOW)
+    GPIO.setup(ECHO, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+
     distance = 1e3*(finish-start)*340/2
 
     return distance # in mm

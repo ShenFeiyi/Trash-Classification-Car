@@ -118,6 +118,11 @@ except KeyboardInterrupt:
     GPIO.cleanup()
 ```
 
+```python
+''' WARNING '''
+# Because GPIO19 is in use (Ultrasonics module), button is disabled.
+```
+
 ### Camera.py
 
 ```python

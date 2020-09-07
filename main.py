@@ -132,160 +132,183 @@ if __name__ == '__main__':
         info = setup()
         print('树莓派小车启动')
         play_music(Windows, 0.17)
-        print('按下 ctrl+c 紧急退出')
-        print('按键以继续')
-        ScanKey()
+        print('按下 ctrl+c 退出')
+        #print('按键以继续')
+        #ScanKey()
 
-        confidence = None
-        while_count = 0
-        while not confidence:
-            if not while_count == 0:
-                random_degree = 360*np.random.rand() - 180
-                if random_degree >=0:
+        while True:
+            confidence = None
+            while_count = 0
+            while not confidence:
+                if not while_count == 0:
+                    random_degree = 360*np.random.rand() - 180
+                    if random_degree >= 0:
+                        turn_right(random_degree,info['L_Motor'],info['R_Motor'])
+                    else:
+                        turn_left(random_degree,info['L_Motor'],info['R_Motor'])
+                
+                # Take a picture
+                ## -*- Overview -*- ##
+                camera = picamera.PiCamera()
+                biii(653,0.1)
+                time.sleep(0.1)
+                camera.capture('you_only_look_once.jpg')
+                camera.close()
+                img = Image.open('you_only_look_once.jpg')
+                img = img.rotate(90,expand=True)
+                img = img.crop((0.15*img.size[0],0.35*img.size[1],0.85*img.size[0],0.75*img.size[1]))
+                img.save('you_only_look_once.jpg')
+
+                weights_count = 0
+                while weights_count < len(info['weights']):
+                    # Yolov3-tiny
+                    params = {}
+                    params['image'] = 'you_only_look_once.jpg'
+                    params['names'] = '/home/pi/darknet-nnpack/data/trash25.names'
+                    params['config'] = '/home/pi/darknet-nnpack/cfg/yolov3-trash25.cfg'
+                    params['weights'] = info['weights'][weights_count]
+                    weights_count += 1
+
+                    start = time.time()
+                    label, confidence, x, y = yolo_detect(params)
+                    finish = time.time()
+                    if (type(label)==str) and (type(confidence)==float):
+                        print('yolo检测共 {:.2f} 秒'.format(finish - start))
+                        print('种类:{:s}\t置信度:{:.2f}%\t({:.1f},{:.1f})'.format(label,100*confidence,x,y))
+                    if confidence:
+                        break
+                # end of `while weights_count < len(info['weights'])`
+
+                while_count += 1
+                if while_count == 10:
+                    print('附近没有找到垃圾')
+                    break
+            # end of `while not confidence`
+
+            if (not while_count == 10) and (not confidence == None):
+                # Aim at target
+                img = Image.open('you_only_look_once.jpg')
+                xlength = img.size[0]
+                theta = np.arctan((x-xlength/2)/(10*xlength/9))*180/np.pi
+                if theta >= 0:
+                    turn_right(theta,info['L_Motor'],info['R_Motor'])
+                else:
+                    theta = -theta
+                    turn_left(theta,info['L_Motor'],info['R_Motor'])
+
+                # Go forward
+                distance = biu()
+                print('{:.2f} mm'.format(distance))
+                init_speed = 20
+                final_speed = 50
+                speed_forward(init_speed,final_speed,0.1,info['L_Motor'],info['R_Motor'])
+                while distance > 500:
+                    distance = biu()
+                    print('{:.2f} mm'.format(distance))
+                    time.sleep(0.1)
+                    speed_forward(50,50,0.1,info['L_Motor'],info['R_Motor'])
+                init_speed = 50
+                final_speed = 20
+                speed_forward(init_speed,final_speed,0.1,info['L_Motor'],info['R_Motor'])
+                speed_forward(0,0,1,info['L_Motor'],info['R_Motor'])
+
+                # Take a picture
+                ## -*- Review -*- ##
+                confidence = None
+                while_count = 0
+                while not confidence:
+                    camera = picamera.PiCamera()
+                    biii(653,0.1)
+                    time.sleep(0.1)
+                    camera.capture('you_only_look_once.jpg')
+                    camera.close()
+                    img = Image.open('you_only_look_once.jpg')
+                    img = img.rotate(90,expand=True)
+                    img = img.crop((0,0.2*img.size[1],img.size[0],img.size[1]))
+                    img.save('you_only_look_once.jpg')
+
+                    weights_count = 0
+                    while weights_count < len(info['weights']):
+                        # Yolov3-tiny
+                        params = {}
+                        params['image'] = 'you_only_look_once.jpg'
+                        params['names'] = '/home/pi/darknet-nnpack/data/trash25.names'
+                        params['config'] = '/home/pi/darknet-nnpack/cfg/yolov3-trash25.cfg'
+                        params['weights'] = info['weights'][weights_count]
+                        weights_count += 1
+
+                        start = time.time()
+                        label, confidence, x, y = yolo_detect(params)
+                        finish = time.time()
+                        if (type(label)==str) and (type(confidence)==float):
+                            print('yolo检测共 {:.2f} 秒'.format(finish - start))
+                            print('种类:{:s}\t置信度:{:.2f}%\t({:.1f},{:.1f})'.format(label,100*confidence,x,y))
+                        if confidence:
+                            break
+                    # end of `while weights_count < len(info['weights'])`
+                    while_count += 1
+                    if while_count == 3:
+                        print('看错了')
+                        break
+                # end of `while not confidence`
+
+                if (not while_count == 3) and (not confidence == None):
+                    # Aim at target
+                    img = Image.open('you_only_look_once.jpg')
+                    xlength = img.size[0]
+                    theta = np.arctan((x-xlength/2)/(10*xlength/9))*180/np.pi
+                    if theta >= 0:
+                        turn_right(theta,info['L_Motor'],info['R_Motor'])
+                    else:
+                        theta = -theta
+                        turn_left(theta,info['L_Motor'],info['R_Motor'])
+
+                    # Go forward
+                    distance = biu()
+                    print('{:.2f} mm'.format(distance))
+                    init_speed = 20
+                    final_speed = 30
+                    speed_forward(init_speed,final_speed,0.1,info['L_Motor'],info['R_Motor'])
+                    while distance > 80:
+                        distance = biu()
+                        print('{:.2f} mm'.format(distance))
+                        time.sleep(0.1)
+                        speed_forward(30,30,0.1,info['L_Motor'],info['R_Motor'])
+                    init_speed = 30
+                    final_speed = 20
+                    speed_forward(init_speed,final_speed,0.1,info['L_Motor'],info['R_Motor'])
+                    speed_forward(0,0,1,info['L_Motor'],info['R_Motor'])
+
+                    # Arm
+                    info['servo'] = DOWN(info['servo'])
+                    time.sleep(1)
+
+                    # To show that we are able to take trash to somewhere
+                    speed_backward(20,50,1,info['L_Motor'],info['R_Motor'])
+                    speed_backward(50,20,1,info['L_Motor'],info['R_Motor'])
+                    speed_backward(0,0,1,info['L_Motor'],info['R_Motor'])
+                    turn_right(350,info['L_Motor'],info['R_Motor'])
+                    turn_left(350,info['L_Motor'],info['R_Motor'])
+                    time.sleep(1)
+                    info['servo'] = UP(info['servo'])
+                # end of `if (not while_count == 3) and (not confidence == None)`
+
+                # next turn
+                speed_backward(25,25,3,info['L_Motor'],info['R_Motor'])
+                random_degree = 180*np.random.rand() + 90
+                if random_degree <= 180:
                     turn_right(random_degree,info['L_Motor'],info['R_Motor'])
                 else:
+                    random_degree  = 360 - random_degree
                     turn_left(random_degree,info['L_Motor'],info['R_Motor'])
-            
-            # Take a picture
-            ## -*- Overview -*- ##
-            camera = picamera.PiCamera()
-            biii(653,0.1)
-            time.sleep(0.1)
-            camera.capture('you_only_look_once.jpg')
-            camera.close()
-            img = Image.open('you_only_look_once.jpg')
-            img = img.rotate(90,expand=True)
-            img = img.crop((0.15*img.size[0],0.35*img.size[1],0.85*img.size[0],0.75*img.size[1]))
-            img.save('you_only_look_once.jpg')
-
-            weights_count = 0
-            while weights_count < len(info['weights']):
-                # Yolov3-tiny
-                params = {}
-                params['image'] = 'you_only_look_once.jpg'
-                params['names'] = '/home/pi/darknet-nnpack/data/trash25.names'
-                params['config'] = '/home/pi/darknet-nnpack/cfg/yolov3-trash25.cfg'
-                params['weights'] = info['weights'][weights_count]
-                weights_count += 1
-
-                start = time.time()
-                label, confidence, x, y = yolo_detect(params)
-                finish = time.time()
-                if (type(label)==str) and (type(confidence)==float):
-                    print('yolo检测共 {:.2f} 秒'.format(finish - start))
-                    print('种类:{:s}\t置信度:{:.2f}%\t({:.1f},{:.1f})'.format(label,100*confidence,x,y))
-                if confidence:
-                    break
-            # end of `while weights_count < len(info['weights'])`
-
-            while_count += 1
-            if while_count == 10:
-                print('附近没有找到垃圾')
-                break
-        # end of `while not confidence`
-
-        if (not while_count == 10) and (not confidence == None):
-            # Aim at target
-            img = Image.open('you_only_look_once.jpg')
-            xlength = img.size[0]
-            theta = np.arctan((x-xlength/2)/(10*xlength/9))*180/np.pi
-            if theta >= 0:
-                turn_right(theta,info['L_Motor'],info['R_Motor'])
-            else:
-                theta = -theta
-                turn_left(theta,info['L_Motor'],info['R_Motor'])
-
-            # Go forward
-            distance = biu()
-            print('{:.2f} mm'.format(distance))
-            init_speed = 20
-            final_speed = 50
-            speed_forward(init_speed,final_speed,0.1,info['L_Motor'],info['R_Motor'])
-            while distance > 500:
-                distance = biu()
-                print('{:.2f} mm'.format(distance))
-                time.sleep(0.1)
-                speed_forward(50,50,0.1,info['L_Motor'],info['R_Motor'])
-            init_speed = 50
-            final_speed = 20
-            speed_forward(init_speed,final_speed,0.1,info['L_Motor'],info['R_Motor'])
-            speed_forward(0,0,1,info['L_Motor'],info['R_Motor'])
-
-            # Take a picture
-            ## -*- Review -*- ##
-            camera = picamera.PiCamera()
-            biii(653,0.1)
-            time.sleep(0.1)
-            camera.capture('you_only_look_once.jpg')
-            camera.close()
-            img = Image.open('you_only_look_once.jpg')
-            img = img.rotate(90,expand=True)
-            img = img.crop((0,0.2*img.size[1],img.size[0],img.size[1]))
-            img.save('you_only_look_once.jpg')
-
-            weights_count = 0
-            while weights_count < len(info['weights']):
-                # Yolov3-tiny
-                params = {}
-                params['image'] = 'you_only_look_once.jpg'
-                params['names'] = '/home/pi/darknet-nnpack/data/trash25.names'
-                params['config'] = '/home/pi/darknet-nnpack/cfg/yolov3-trash25.cfg'
-                params['weights'] = info['weights'][weights_count]
-                weights_count += 1
-
-                start = time.time()
-                label, confidence, x, y = yolo_detect(params)
-                finish = time.time()
-                if (type(label)==str) and (type(confidence)==float):
-                    print('yolo检测共 {:.2f} 秒'.format(finish - start))
-                    print('种类:{:s}\t置信度:{:.2f}%\t({:.1f},{:.1f})'.format(label,100*confidence,x,y))
-                if confidence:
-                    break
-            # end of `while weights_count < len(info['weights'])`
-
-            # Aim at target
-            img = Image.open('you_only_look_once.jpg')
-            xlength = img.size[0]
-            theta = np.arctan((x-xlength/2)/(10*xlength/9))*180/np.pi
-            if theta >= 0:
-                turn_right(theta,info['L_Motor'],info['R_Motor'])
-            else:
-                theta = -theta
-                turn_left(theta,info['L_Motor'],info['R_Motor'])
-
-            # Go forward
-            distance = biu()
-            print('{:.2f} mm'.format(distance))
-            init_speed = 20
-            final_speed = 30
-            speed_forward(init_speed,final_speed,0.1,info['L_Motor'],info['R_Motor'])
-            while distance > 80:
-                distance = biu()
-                print('{:.2f} mm'.format(distance))
-                time.sleep(0.1)
-                speed_forward(30,30,0.1,info['L_Motor'],info['R_Motor'])
-            init_speed = 30
-            final_speed = 20
-            speed_forward(init_speed,final_speed,0.1,info['L_Motor'],info['R_Motor'])
-            speed_forward(0,0,1,info['L_Motor'],info['R_Motor'])
-
-            # Arm
-            info['servo'] = DOWN(info['servo'])
-            time.sleep(1)
-            speed_backward(20,50,1,info['L_Motor'],info['R_Motor'])
-            speed_backward(50,20,1,info['L_Motor'],info['R_Motor'])
-            speed_backward(0,0,1,info['L_Motor'],info['R_Motor'])
-            time.sleep(1)
-            info['servo'] = UP(info['servo'])
-            _ = setup_servo() # 机械臂松弛
-        # end of `if (not while_count == 10) and (not confidence == None)`
-            
+            # end of `if (not while_count == 10) and (not confidence == None)`
+        # end of `while True`
     except KeyboardInterrupt:
-        print('紧急退出')
+        print('EXIT')
         speed_forward(0,0,1,info['L_Motor'],info['R_Motor'])
     finally:
         #play_music(Castle_in_the_sky, 0.3)
         _ = setup_servo() # 机械臂松弛
-        speed_backward(20,20,8,info['L_Motor'],info['R_Motor'])
+        speed_backward(20,20,10,info['L_Motor'],info['R_Motor'])
         speed_backward(0,0,1,info['L_Motor'],info['R_Motor'])
         print('\n -*- END -*- \n')
