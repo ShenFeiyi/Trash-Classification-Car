@@ -228,7 +228,7 @@ if __name__ == '__main__':
                     img.save('you_only_look_once.jpg')
 
                     weights_count = 0
-                    while weights_count < 3):
+                    while weights_count < 3:
                         # Yolov3-tiny
                         params = {}
                         params['image'] = 'you_only_look_once.jpg'
